@@ -6,8 +6,11 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
 
 abstract class pRes {
+	
+	public static ArrayList<Session> sessionList;
 	
 	public static ServerSocket serverSocket;
 	public static final int LISTEN_PORT = 17201;
@@ -79,15 +82,25 @@ class EventManager {
 	}
 }
 
-class ManageClient implements Runnable {
+class Session implements Runnable {
+	
+	private String ip;
 
 	@Override
 	public void run() {
 		
 		if (!getStream())
 			return;
+		
+		getIpAddress();
 
-		System.out.println("연결되었습니다\nIP : " + pRes.clientSocket.getInetAddress().getHostAddress());
+		
+	}
+	
+	private void getIpAddress() {
+
+		ip = pRes.clientSocket.getInetAddress().getHostAddress();
+		System.out.println("연결되었습니다\nIP : " + ip);		
 	}
 
 	private boolean getStream() {
@@ -130,7 +143,7 @@ public class ScreenStealerServer {
 		while (true) {
 			try {
 				pRes.clientSocket = pRes.serverSocket.accept();
-				new Thread(new ManageClient()).start();
+				new Thread(new Session()).start();
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
