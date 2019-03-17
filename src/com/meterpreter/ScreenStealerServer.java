@@ -33,7 +33,7 @@ class EventManager {
 		if (screenCaptureByteArray == null) 
 			return;
 		
-		saveFile(screenCaptureByteArray);
+		update(screenCaptureByteArray);
 	}
 
 	private boolean sendCommand(String cmd) {
@@ -57,7 +57,7 @@ class EventManager {
 		}
 	}
 
-	private boolean saveFile(byte[] captureImage) {
+	private boolean update(byte[] captureImage) {
 		
 		try {
 			String randomFileName = "" + System.currentTimeMillis() + ".jpg";
@@ -71,12 +71,6 @@ class EventManager {
 			e.printStackTrace();
 			return false;
 		}
-	}
-
-	public void message() {
-		
-		if(!sendCommand(Cmd.MESSAGE))
-			return;
 	}
 	
 	private boolean sendMessage(String msg) {
