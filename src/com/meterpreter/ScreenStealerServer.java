@@ -11,8 +11,8 @@ import java.util.Collections;
 import java.util.List;
 
 abstract class pRes {
-	
-	public static final String imageName = "live.jpg";
+
+	public static final String IMG_NAME = "live.jpg";
 
 	public static List<Session> sessionList;
 
@@ -29,7 +29,7 @@ class CaptureManager {
 
 	private DataOutputStream dos;
 	private ObjectInputStream ois;
-	
+
 	private static class Singleton {
 		static CaptureManager INSTANCE = new CaptureManager();
 	}
@@ -91,11 +91,37 @@ class CaptureManager {
 }
 
 class Commander {
-	
+
 }
 
 class Receiver {
 	
+	private ObjectInputStream ois;
+	
+	public Receiver(ObjectInputStream ois) {
+		this.ois = ois;
+	}
+
+	public void update(ObjectInputStream ois) throws Exception {			
+		byte[] capturedImage = getScreenCaptureByteArray();
+		if(capturedImage == null)
+			throw new Exception("Session closed");
+		
+		FileOutputStream fos = new FileOutputStream(pRes.IMG_NAME);
+		fos.write(captureImage);
+		fos.close();
+
+		return;
+	}
+
+	private byte[] getScreenCaptureByteArray() {
+		try {
+			return (byte[]) ois.readObject();
+		} catch (Exception e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
 }
 
 class Session implements Runnable {
@@ -125,10 +151,12 @@ class Session implements Runnable {
 
 	@Override
 	public void run() {
-		while(true) {
+		Receiver receiver = new Receiver();
+
+		while (true) {
 			try {
-				
-			}catch(Exception sessionClosed) {
+				receiver.update(ois);
+			} catch (Exception sessionClosed) {
 				System.out.println("Session lost : " + ip);
 				return;
 			}
