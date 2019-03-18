@@ -259,7 +259,7 @@ class IO {
 					invalidCommand();
 					continue;
 				}
-				if (pRes.sessionList.size() < sessionIdx) {
+				if (pRes.sessionList.size() < sessionIdx || sessionIdx <= 0) {
 					System.out.println("There is no session " + sessionIdx);
 					continue;
 				}
